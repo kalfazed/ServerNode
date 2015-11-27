@@ -74,6 +74,7 @@ function BootTestFactory() {
               console.log('target power state is powered off')
               setTimeout(function () {
                 // if (power off) power on
+                console.log('5 seconds have passed, now we should power on');
                 test.numato_controller.powerOn(function (error) {
                   if (error) {
                     console.log('fail to powerOn')
@@ -82,6 +83,7 @@ function BootTestFactory() {
                   }
                   // power led check
                   console.log('POWERED ON');
+                  /*
                   test.numato_controller.waitPowerOn(function (error) {
                     if (error) {
                       gotoNextState(test, "error");
@@ -90,16 +92,22 @@ function BootTestFactory() {
                       test.test_state = "wait did cold boot";
                     }
                   });
+                  */   
+                 // test.test_state = "wait did cold boot";
+                   completion_routine(error);
                 });
+                
               }, 5000);
+            
             }
           });
         });
         break;
       case "did cold boot": // foreign event
+        console.log("Did cold boot");
         // status check
         if (test.test_result == "success") {
-          
+            
         } else {
           
         }
@@ -130,7 +138,7 @@ function BootTestFactory() {
           
         }
         // save status
-
+        
         completion_routine(false);
 
         test.current_num_trials = test.current_num_trials + 1;

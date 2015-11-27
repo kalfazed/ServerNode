@@ -115,7 +115,7 @@ function NumatoControllerFactory() {
         var completion_routine = callback;
 
         if (isTimerActive(self)) {
-            console.log('[waitPowerOn] timer is already active');
+ //           console.log('[waitPowerOn] timer is already active');
             callback(true);
             return;
         }
@@ -127,11 +127,11 @@ function NumatoControllerFactory() {
                 return;
             }
             if (value > 0) {
-                console.log('[waitPowerOn] adc 3 is ' + value);
+ //               console.log('[waitPowerOn] adc 3 is ' + value);
                 clearTimer(self);
-                completion_routine(false);
+                completion_routine(true);
             } else {
-                console.log('[waitPowerOn] adc 3 is ' + value);
+//                console.log('[waitPowerOn] adc 3 is ' + value);
             }
             // TODO : timeout
         }
@@ -160,7 +160,7 @@ function NumatoControllerFactory() {
         }
 
         if (isTimerActive(self)) {
-            console.log('[waitPowerOff] timer is already active');
+ //           console.log('[waitPowerOff] timer is already active');
             callback(true);
             return;
         }
@@ -173,12 +173,15 @@ function NumatoControllerFactory() {
             }
             self.sum += value;
             if (self.counter >= 15) {
-                if (self.sum < 15) {
-                    console.log('[waitPowerOff] adc 3 sum is ' + self.sum);
+                if (self.sum < 30) {
+//                    console.log('[waitPowerOff] Current counter is ' + self.counter);
+//                    console.log('[waitPowerOff] adc 3 sum is ' + self.sum);
+ //                   console.log('Have finished Waiting');              
                     clearTimer(self);
                     completion_routine(false);
                 } else {
-                    console.log('[waitPowerOff] adc 3 sum is ' + self.sum);
+//                    console.log('[waitPowerOff] Current counter is ' + self.counter);
+ //                   console.log('[waitPowerOff] adc 3 sum is ' + self.sum);
                     self.sum = 0;
                     self.counter = 0;
                     setTimeout(read_function, 1000);
@@ -230,14 +233,14 @@ function NumatoControllerFactory() {
             }
                        
             self.sum += value;
-            console.log('current counter' + self.counter);
-            console.log('current sum ' + self.sum);
-            if (self.counter >= 10) {
-                if (self.sum <= 10) { // power off
-                    console.log('[powerOn] sum is ' + self.sum);
+            if (self.counter >= 15) {
+                if (self.sum <= 30) { // power off
+   //                 console.log('[powerOn] Current counter is ' + self.counter);
+   //                 console.log('[powerOn] sum is ' + self.sum);
                     self.pushPowerSwitch();
                 } else {
-                    console.log('[powerOn] already power on. adc 3 sum is ' + self.sum);
+   //                 console.log('[powerOn] Current counter is ' + self.counter);
+    //                console.log('[powerOn] already power on. adc 3 sum is ' + self.sum);
                     // already power on
                 }
             
@@ -265,7 +268,7 @@ function NumatoControllerFactory() {
         }
         
         if (isTimerActive(self)) {
-            console.log('[powerOff] timer is already active');
+   //         console.log('[powerOff] timer is already active');
             completion_routine(true);
             return;
         }
@@ -281,10 +284,10 @@ function NumatoControllerFactory() {
             self.sum += value;
             if (self.counter >= 10) {
                 if (self.sum > 10) { // power on
-                    console.log('[powerOff] sum is ' + self.sum);
+   //                 console.log('[powerOff] sum is ' + self.sum);
                     self.pushPowerSwitch();
                 } else {
-                    console.log('[powerOff] already power off. adc 3 sum is ' + self.sum);
+   //                 console.log('[powerOff] already power off. adc 3 sum is ' + self.sum);
                     // already power off
                 }
             

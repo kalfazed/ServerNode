@@ -4,12 +4,17 @@ var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');
 var logger = require('morgan');
-var cookieParser = require('cookie-parser');
+
+
 var bodyParser = require('body-parser');
 var session = require('express-session');
-
+var fs = require('fs');
 var routes = require('./routes/index');
 var users = require('./routes/users');
+var busboy = require('connect-busboy');
+var formidable = require('formidable');
+var util = require('util');
+
 
 var app = express();
 
@@ -22,40 +27,15 @@ app.set('view engine', 'html');
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 app.use(logger('dev'));
+
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cookieParser());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+//app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use(function(req, res, next){
-  var msg = req.session.success;
-  delete req.session.error;
-  delete req.session.success;
-  res.locals.message = '';
-  if (msg) res.locals.message = '<p>' + msg + '</p>';
-  next();
-});
+app.use(busboy());
 
-
-app.get('/', function(req, res){
-    res.render('homepage');
-});
-
-app.post('/', function(req, res){
-     req.session.regenerate(function(){
-        req.session.success = 'Authenticated as ' + res.body.session
-          + ' click to <a href="/logout">logout</a>. '
-          + ' You may now access <a href="/restricted">/restricted</a>.';
-        res.redirect('back');
-      });
-
-});
-
-
-app.listen(8888);
-console.log('Test controller start on port 8888');
-
-module.exports = app;
 
 var http = require('http');
 var StringDecoder = require('string_decoder').StringDecoder;
@@ -64,7 +44,130 @@ var BootTestFactory = require('./boot_test.js');
 var html;
 var testSession = TestSessionController.createNewTestSession("test","", 'COM4');
 
+var testTimes_reboot;
+var testTimes_coldboot;
+var target_url;
+var agentIP_input;
+var agentName_input;
+var agentIP_http;
+var Operation_log = "";
+var kalfazed;
+
+
+
+app.get('/', function(req, res){
+    res.render('mainPage');
+});
+
+app.post('/upload', function(req, res){
+   console.log("fuck");
+});
   
+
+
+
+app.post('/bootTest', function(req, res){
+//    res.render('bootTest');
+    agentIP_input = req.body.IP;
+    agentIP_http = "http://" + agentIP_input + ":8000";
+    agentName_input = req.body.Name;
+    Operation_log += "Hello " + agentName_input;
+    res.render('bootTest', {title: 'Kalfazed wanna have lunch!!'});
+});
+
+
+app.post('/start_test', function(req, res){
+    var test_case = new BootTestFactory.BootTest(4, 'COM4', 9600);
+          testSession = TestSessionController.createNewTestSession(kalfazed, "", test_case);
+          if (testSession == null) {
+            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            res.end('fail createNewTestSession\n'); 
+          } else {
+            testSession.start(function (error) {
+              if (error) {
+                  TestSessionController.deleteNewTestSession(testSession, function (error) {
+                  res.writeHead(200, { 'Content-Type': 'text/plain' });
+                  res.end('fail start_test\n');
+                });
+              } else {
+                res.writeHead(200, { 'Content-Type': 'text/plain' });
+                res.end('start_test\n');
+              }
+            });
+          }
+});
+
+
+app.post('/pushPowerButton', function(req, res){
+   testSession = TestSessionController.getSession(kalfazed);
+          testSession.action("push_power_switch", function (error) {
+            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            if (error) {
+              res.end('fail power_on_off\n');
+            } else {
+              res.end('power_on_off\n');
+            }
+          });
+});
+
+app.post('/reBoot', function(req, res){
+  testTimes_reboot = req.body.selection_reBoot;
+  
+  while(testTimes_reboot != 0)
+  {
+    console.log(testTimes_reboot);
+    testTimes_reboot--;
+    sleep(1000);
+  }
+  
+  res.end(agentIP_http);
+ // res.end(agentIP);
+  console.log("Running reboot");
+});
+
+app.post('/coldBoot', function(req, res){
+    testTimes_coldboot = req.body.selection_coldBoot;
+    testSession = TestSessionController.getSession(kalfazed);
+ //   while(testTimes_coldboot != 0)
+ //   {
+      console.log("Start cold boot number "+testTimes_coldboot+" time");
+      testSession.action("cold boot", function (error) {
+            if (error) {
+              res.end("fail cold boot number " +testTimes_coldboot+" time" );
+            } else {
+              console.log("Finish cold boot number "+testTimes_coldboot+" time");
+              sleep(3000);
+              res.statusCode = 302;
+              res.setHeader('location', agentIP_http); 
+              res.end("cold boot number " +testTimes_coldboot+" time" );
+            }
+      });
+//      testTimes_coldboot --;
+ //   }
+    console.log("Finish all the cold boot");
+    
+});
+
+
+
+
+app.listen(8888);
+console.log('Test controller start on port 8888');
+
+module.exports = app;
+
+
+function sleep(miliSeconds){
+    var startTime = new Date().getTime();
+    while (new Date().getTime() < startTime + miliSeconds);
+    
+};
+
+
+
+
+
+ 
  /* 
 http.createServer(function (request, response) { 
  
@@ -73,6 +176,8 @@ http.createServer(function (request, response) {
 }).listen(8000);
 
 */
+
+
 
 function dispatcher(request, response) {
  
@@ -325,7 +430,5 @@ function dispatcher(request, response) {
 
 
 function checkPowerLed() {
-
 }
 
-console.log('Server running at http://127.0.0.1:8000/');
