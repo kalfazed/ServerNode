@@ -53,18 +53,14 @@ var agentIP_http;
 var Operation_log = "";
 var kalfazed;
 
-
-
 app.get('/', function(req, res){
     res.render('mainPage');
 });
 
 app.post('/upload', function(req, res){
-   console.log("fuck");
+
 });
   
-
-
 
 app.post('/bootTest', function(req, res){
 //    res.render('bootTest');
@@ -77,7 +73,7 @@ app.post('/bootTest', function(req, res){
 
 
 app.post('/start_test', function(req, res){
-    var test_case = new BootTestFactory.BootTest(4, 'COM4', 9600);
+    var test_case = new BootTestFactory.BootTest('COM7', 9600);
           testSession = TestSessionController.createNewTestSession(kalfazed, "", test_case);
           if (testSession == null) {
             res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -125,30 +121,56 @@ app.post('/reBoot', function(req, res){
   console.log("Running reboot");
 });
 
-app.post('/coldBoot', function(req, res){
-    testTimes_coldboot = req.body.selection_coldBoot;
-    testSession = TestSessionController.getSession(kalfazed);
- //   while(testTimes_coldboot != 0)
- //   {
+///////////////////////////////////////////////////////
+var events = require('events');
+var eventEmitter = new events.EventEmitter();
+
+var coldBootEvent = function cbe() {
+      testSession = TestSessionController.getSession(kalfazed);
       console.log("Start cold boot number "+testTimes_coldboot+" time");
       testSession.action("cold boot", function (error) {
             if (error) {
-              res.end("fail cold boot number " +testTimes_coldboot+" time" );
+              console.log("fail cold boot number " +testTimes_coldboot+" time" );
             } else {
               console.log("Finish cold boot number "+testTimes_coldboot+" time");
-              sleep(3000);
-              res.statusCode = 302;
-              res.setHeader('location', agentIP_http); 
-              res.end("cold boot number " +testTimes_coldboot+" time" );
+//              sleep(3000);
+//              res.statusCode = 302;
+//              res.setHeader('location', agentIP_http); 
+//              res.end("cold boot number " +testTimes_coldboot+" time" );
             }
       });
-//      testTimes_coldboot --;
- //   }
-    console.log("Finish all the cold boot");
-    
+      
+      
+}
+
+
+eventEmitter.on('coldBoot', coldBootEvent);
+///////////////////////////////////////////////////////
+
+
+app.post('/coldBoot', function(req, res){
+    testTimes_coldboot = req.body.selection_coldBoot;
+    console.log("Start cold boot number "+testTimes_coldboot+" times");
+
+    testSession = TestSessionController.getSession(kalfazed);
+    testSession.action("cold boot", function (error) {
+         if (error) {
+            res.end('fail cold boot\n');
+            console.log("fail cold boot");
+          } else {
+            console.log("Finish cold boot"+testTimes_coldboot);
+            res.end('cold boot\n');
+            }
+          });
+      
+  
+ //   console.log("end the post cold boot");           
 });
 
 
+app.post('/RealColdBoot', function(req, res){
+    testTimes_coldboot = req.body.selection_coldBoot;
+});
 
 
 app.listen(8888);
@@ -162,7 +184,6 @@ function sleep(miliSeconds){
     while (new Date().getTime() < startTime + miliSeconds);
     
 };
-
 
 
 

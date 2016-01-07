@@ -6,10 +6,10 @@ function BootTestFactory() {
 
   var factory = this;
 
-  function BootTest(num_trials, port_name, baudrate) {
+  function BootTest(port_name, baudrate) {
     this.test_state = "idle";
     this.current_num_trials = 0;
-    this.end_num_trials = num_trials;
+    this.end_num_trials = 4;
     this.test_result = "";
     this.numato_controller = new NumatoControllerFactory.NumatoController(port_name, baudrate);
   }
@@ -25,75 +25,95 @@ function BootTestFactory() {
   //   });
   // }
   
-  function gotoNextState(test, next_state) {
+  /*
+  void callback (bool result);
+
+  void fms (CTtest test, void * callback);
+  */
+  function gotoNextState(test, next_state, callback) {
     test.test_state = next_state;
-    fms(test, fms);
+    fms(test, callback);
   }
 
   function fms(test, callback) {
+    var current_test = test;
     var completion_routine = callback;
 
-    switch (test.test_state) {
+    switch (current_test.test_state) {
       case "controller ready": // foreign event
         // clear status
-        test.numato_controller.reset(function (error) {
+        current_test.numato_controller.reset(function (error) {
           if (error) {
             console.log('fail to reset numato')
-            gotoNextState(test, "error");
-            completion_routine(error);
+            gotoNextState(current_test, "error", function(error) {
+              completion_routine(error);
+            });
             return;
           } else {
             console.log('reset numato')
             // wait link up with agent
-            test.test_state = "linkup_wait"
+            current_test.test_state = "linkup_wait"
             completion_routine(error);
           }
         });
         break;
       case "agent ready": // foreign event
         setTimeout(function () {
-          gotoNextState(test, "cold boot");
+          gotoNextState(current_test, "cold boot");
         }, 5000);
         completion_routine(false);
         break;
       case "cold boot":
-        console.log('start cold boot test ' + test.current_num_trials);
+        console.log('start cold boot test ' + current_test.current_num_trials);
         
         // power off
-        test.numato_controller.powerOff(function (error) {
+        current_test.numato_controller.powerOff(function (error) {
           if (error) {
             console.log('fail to powerOff')
-            gotoNextState(test, "error");
+            gotoNextState(current_test, "error",function (error) {
+                      completion_routine(error);
+            });
             return;
           }
           // wait power off
-          test.numato_controller.waitPowerOff(function (error) {
+          current_test.numato_controller.waitPowerOff(function (error) {
             if (error) {
-              gotoNextState(test, "error");
+              gotoNextState(current_test, "error",function (error) {
+                      completion_routine(error);
+                    });
             } else {
               console.log('target power state is powered off')
               setTimeout(function () {
                 // if (power off) power on
                 console.log('5 seconds have passed, now we should power on');
-                test.numato_controller.powerOn(function (error) {
+                current_test.numato_controller.powerOn(function (error) {
                   if (error) {
                     console.log('fail to powerOn')
-                    gotoNextState(test, "error");
+                    gotoNextState(current_test, "error", function (error) {
+                      completion_routine(error);
+                    });
                     return;
                   }
                   // power led check
                   console.log('POWERED ON');
-                  /*
-                  test.numato_controller.waitPowerOn(function (error) {
+                  
+                  setTimeout(function() {
+                      //current_test.test_state = "wait did cold boot";
+                      gotoNextState(current_test, "did cold boot", function (error) {
+                        completion_routine(error);
+                      });
+                  },30000);
+                  
+             /*   
+                  current_test.numato_controller.waitPowerOn(function (error) {
                     if (error) {
-                      gotoNextState(test, "error");
+                      gotoNextState(current_test, "error");
                     } else {
                       // wait did boot
-                      test.test_state = "wait did cold boot";
+                      gotoNextState(current_test, "did cold boot");
                     }
                   });
-                  */   
-                 // test.test_state = "wait did cold boot";
+               */  
                    completion_routine(error);
                 });
                 
@@ -103,36 +123,35 @@ function BootTestFactory() {
           });
         });
         break;
+      case "wait did cold boot":
+        break;
       case "did cold boot": // foreign event
         console.log("Did cold boot");
-        // status check
-        if (test.test_result == "success") {
-            
-        } else {
-          
-        }
-        // save status
-
-        completion_routine(false);
         
-        test.current_num_trials = test.current_num_trials + 1;
-        if (test.current_num_trials != test.end_num_trials) {
-          gotoNextState(test, "reboot");
+        current_test.current_num_trials = current_test.current_num_trials + 1;
+        if (current_test.current_num_trials != current_test.end_num_trials) {
+          console.log("Current number is "+current_test.current_num_trials);
+          gotoNextState(current_test, "cold boot",function (error) {
+                      completion_routine(error);
+                    });
         } else {
-          gotoNextState(test, "finished");
+          gotoNextState(current_test, "finished",function (error) {
+                      completion_routine(error);
+                    });
         }
         break;        
       case "reboot":
-        console.log('start reboot test ' + test.current_num_trials);
+        console.log('start reboot test ' + current_test.current_num_trials);
 
         // request reboot
         
         // wait did reboot
-        test.test_state = "wait did reboot";
+        current_test.test_state = "wait did reboot";
+        completion_routine(true);
         break;
       case "did reboot": // foreign event
         // status check
-        if (test.test_result == "success") {
+        if (current_test.test_result == "success") {
           
         } else {
           
@@ -141,8 +160,8 @@ function BootTestFactory() {
         
         completion_routine(false);
 
-        test.current_num_trials = test.current_num_trials + 1;
-        if (test.current_num_trials != test.end_num_trials) {
+        current_test.current_num_trials = current_test.current_num_trials + 1;
+        if (current_test.current_num_trials != current_test.end_num_trials) {
           gotoNextState(test, "cold boot");
         } else {
           gotoNextState(test, "finished");
@@ -156,35 +175,37 @@ function BootTestFactory() {
         break;
       case "error":
         console.log('Finished test with error state.');
+        completion_routine(false);
         break;
       case "finished":
         // save status
         // go idle
         console.log('Finished test without error state.');
+        completion_routine(true);
         break;
       case "relay_on":
-        test.numato_controller.turnOnRelay(function (error) {
+        current_test.numato_controller.turnOnRelay(function (error) {
             completion_routine(error);
         });
         break;
       case "relay_off":
-        test.numato_controller.turnOffRelay(function (error) {
+        current_test.numato_controller.turnOffRelay(function (error) {
             completion_routine(error);
         });
         break;
       case "push_power_switch":
       // Can`t power_on with just relay_on()
-        test.numato_controller.pushPowerSwitch(function (error) {
+        current_test.numato_controller.pushPowerSwitch(function (error) {
             completion_routine(error);
         });
         break;
       case "power_on":
-        test.numato_controller.powerOn(function (error) {
+        current_test.numato_controller.powerOn(function (error) {
             completion_routine(error);
         });
         break;  
       default:
-        console.log('Unknown test state = ' + test.test_status);
+        console.log('Unknown test state = ' + current_test.test_status);
         if (completion_routine != fms) {
           completion_routine(true);
         }
@@ -219,5 +240,14 @@ function BootTestFactory() {
 
   factory.BootTest = BootTest;
 }
+
+function sleep(miliSeconds){
+    var startTime = new Date().getTime();
+    while (new Date().getTime() < startTime + miliSeconds);
+    
+};
+
+
+
 
 module.exports = new BootTestFactory();

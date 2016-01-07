@@ -24,7 +24,7 @@ function TestSessionController() {
       test_case.start(callback);
     }
     TestSessionContext.prototype.action = function (action_name, callback) {
-      console.log('action session ' + test_name)
+  //    console.log('action session ' + test_name)
       test_case.action(action_name, callback);
     }
     TestSessionContext.prototype.abort = function (callback) {
