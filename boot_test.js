@@ -6,12 +6,13 @@ function BootTestFactory() {
 
   var factory = this;
 
-  function BootTest(port_name, baudrate) {
+  function BootTest(times, port_name, baudrate) {
     this.test_state = "idle";
     this.current_num_trials = 0;
-    this.end_num_trials = 4;
+    this.end_num_trials = times;
     this.test_result = "";
     this.numato_controller = new NumatoControllerFactory.NumatoController(port_name, baudrate);
+    console.log("end time is "+this.end_num_trials);
   }
 
   // BootTest.prototype.start = function () {
@@ -102,7 +103,8 @@ function BootTestFactory() {
                       gotoNextState(current_test, "did cold boot", function (error) {
                         completion_routine(error);
                       });
-                  },30000);
+                      console.log("finish cold boot" + current_test.current_num_trials)
+                  },40000);
                   
              /*   
                   current_test.numato_controller.waitPowerOn(function (error) {
@@ -130,7 +132,9 @@ function BootTestFactory() {
         
         current_test.current_num_trials = current_test.current_num_trials + 1;
         if (current_test.current_num_trials != current_test.end_num_trials) {
+
           console.log("Current number is "+current_test.current_num_trials);
+          console.log("End number is "+current_test.end_num_trials);
           gotoNextState(current_test, "cold boot",function (error) {
                       completion_routine(error);
                     });

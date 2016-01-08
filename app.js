@@ -50,8 +50,10 @@ var target_url;
 var agentIP_input;
 var agentName_input;
 var agentIP_http;
+var agentCOM;
 var Operation_log = "";
 var kalfazed;
+
 
 app.get('/', function(req, res){
     res.render('mainPage');
@@ -64,16 +66,20 @@ app.post('/upload', function(req, res){
 
 app.post('/bootTest', function(req, res){
 //    res.render('bootTest');
+    agentCOM = req.body.COM;
     agentIP_input = req.body.IP;
     agentIP_http = "http://" + agentIP_input + ":8000";
     agentName_input = req.body.Name;
     Operation_log += "Hello " + agentName_input;
     res.render('bootTest', {title: 'Kalfazed wanna have lunch!!'});
+    console.log(agentIP_http + "/cdiTest");
 });
 
 
 app.post('/start_test', function(req, res){
-    var test_case = new BootTestFactory.BootTest('COM7', 9600);
+    testTimes_coldboot = req.body.selection_coldBoot;
+//    testTimes_reboot = req.body.selection_coldBoot;
+          var test_case = new BootTestFactory.BootTest(testTimes_coldboot, agentCOM, 9600);
           testSession = TestSessionController.createNewTestSession(kalfazed, "", test_case);
           if (testSession == null) {
             res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -121,47 +127,22 @@ app.post('/reBoot', function(req, res){
   console.log("Running reboot");
 });
 
-///////////////////////////////////////////////////////
-var events = require('events');
-var eventEmitter = new events.EventEmitter();
-
-var coldBootEvent = function cbe() {
-      testSession = TestSessionController.getSession(kalfazed);
-      console.log("Start cold boot number "+testTimes_coldboot+" time");
-      testSession.action("cold boot", function (error) {
-            if (error) {
-              console.log("fail cold boot number " +testTimes_coldboot+" time" );
-            } else {
-              console.log("Finish cold boot number "+testTimes_coldboot+" time");
-//              sleep(3000);
-//              res.statusCode = 302;
-//              res.setHeader('location', agentIP_http); 
-//              res.end("cold boot number " +testTimes_coldboot+" time" );
-            }
-      });
-      
-      
-}
-
-
-eventEmitter.on('coldBoot', coldBootEvent);
-///////////////////////////////////////////////////////
-
 
 app.post('/coldBoot', function(req, res){
-    testTimes_coldboot = req.body.selection_coldBoot;
-    console.log("Start cold boot number "+testTimes_coldboot+" times");
-
     testSession = TestSessionController.getSession(kalfazed);
     testSession.action("cold boot", function (error) {
          if (error) {
             res.end('fail cold boot\n');
             console.log("fail cold boot");
           } else {
-            console.log("Finish cold boot"+testTimes_coldboot);
-            res.end('cold boot\n');
-            }
-          });
+            console.log("Finish cold boot" );
+            setTimeout(function(){
+  //              res.end('cold booting now\n');
+                 res.end(agentIP_http + "/cdiTest");
+            },30000);
+           
+          }
+    });
       
   
  //   console.log("end the post cold boot");           

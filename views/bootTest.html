@@ -32,7 +32,7 @@
 }
 .basic-grey label>span {
 	float: left;
-	width: 10%;
+	width: 15%;
 	text-align: right;
 	padding-right: 10px;
 	margin-top: 10px;
@@ -116,23 +116,40 @@
      </form>
 	    
      <form action="/start_test" method="post" class="basic-grey">
+    
 	     <label>
-		     <span>Creat Session:</span>
-		     <input id="Creat Session" type="text" name="session" placeholder="Please input the session you want to create" /> 
-		     <input action = "/start_test" method = "post" type="submit" value="Creat" />
-
+             <span>Cold boot times :</span>
+             <select name="selection_coldBoot">
+			     <option value=1>1 time</option>
+			     <option value=5>5 times</option>
+			     <option value=10>10 times</option>
+                 <option value=20>20 times</option>
+                 <option value=50>50 times</option>
+                 <option value=100>100 times</option>
+		     </select>   
+	     </label>    
+         <label>         
+             <span>Reboot times :</span>
+             <select name="selection_reBoot">
+			     <option value=1>1 time</option>
+			     <option value=5>5 times</option>
+			     <option value=10>10 times</option>
+                 <option value=20>20 times</option>
+                 <option value=50>50 times</option>
+                 <option value=100>100 times</option>
+		     </select>        
 	     </label>
+         ]
+         <label>
+          <input action = "/start_test" method = "post" type="submit" value="Creat Session" />
+          </label>
      </form>
 
 
      <form action="/coldBoot" method="post" class="basic-grey">
 	     <label>
 		     <span>Cool boot:</span>
-		     <select name="selection_coldBoot">
-			     <option value=1>1 time</option>
-			     <option value=5>5 times</option>
-			     <option value=10>10 times</option>
-		     </select>
+
 		     <input type="submit" value="RUN" />
 
 	     </label>
@@ -141,11 +158,7 @@
      <form action="/reBoot" method="post" class="basic-grey">
 	     <label>
 		     <span>Reboot :</span>
-		     <select name="selection_reBoot">
-			     <option value=1>1 time</option>
-			     <option value=5>5 times</option>
-			     <option value=10>10 times</option>
-		     </select>
+		 
     		     <input type="submit" value="RUN" />
 	     </label>
      </form>
@@ -153,11 +166,6 @@
      <form action="/shutDown" method="post" class="basic-grey">
 	     <label>
 		     <span>Shutdown :</span>
-		     <select name="selection_shutDown">
-			     <option value="1 time">1 time</option>
-			     <option value="5 times">5 times</option>
-			     <option value="10 times">10 times</option>
-		     </select>
     		     <input type="submit" value="RUN" />
 	     </label>
      </form>
@@ -165,24 +173,10 @@
      <form action="/pushPowerButton" method="post" class="basic-grey">
 	     <label>
 		     <span>PushPower :</span>
-		     <select name="selection_push">
-			     <option value="1 time">1 time</option>
-			     <option value="5 times">5 times</option>
-			     <option value="10 times">10 times</option>
-		     </select>
     		     <input type="submit" value="RUN" />
 	     </label>
      </form>
 	 
-	 <form action="/upload" method="post" class="basic-grey">
-	     <label>
-		     <span>SelectFile :</span>
-			 
-			 <input type="file" name="upload" multiple="multiple" />
-    		 <input type="submit" value="upload" />
-	     </label>
-     </form>
-
 
      <form action="/log" method="get" class="basic-grey">
 	     <label>
