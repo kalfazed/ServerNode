@@ -65,7 +65,9 @@ function BootTestFactory() {
         completion_routine(false);
         break;
       case "cold boot":
-        console.log('start cold boot test ' + current_test.current_num_trials);
+        var time_show;
+        time_show = current_test.current_num_trials + 1;
+        console.log('start cold boot test ' + time_show);
         
         // power off
         current_test.numato_controller.powerOff(function (error) {
@@ -103,7 +105,7 @@ function BootTestFactory() {
                       gotoNextState(current_test, "did cold boot", function (error) {
                         completion_routine(error);
                       });
-                      console.log("finish cold boot" + current_test.current_num_trials)
+    //                  console.log("finish cold boot " + time_show)
                   },40000);
                   
              /*   
@@ -128,13 +130,13 @@ function BootTestFactory() {
       case "wait did cold boot":
         break;
       case "did cold boot": // foreign event
-        console.log("Did cold boot");
+        console.log("Did cold boot\n");
         
         current_test.current_num_trials = current_test.current_num_trials + 1;
         if (current_test.current_num_trials != current_test.end_num_trials) {
 
-          console.log("Current number is "+current_test.current_num_trials);
-          console.log("End number is "+current_test.end_num_trials);
+ //         console.log("Current number is "+current_test.current_num_trials);
+ //         console.log("End number is "+current_test.end_num_trials);
           gotoNextState(current_test, "cold boot",function (error) {
                       completion_routine(error);
                     });
@@ -185,7 +187,7 @@ function BootTestFactory() {
         // save status
         // go idle
         console.log('Finished test without error state.');
-        completion_routine(true);
+        completion_routine(false);
         break;
       case "relay_on":
         current_test.numato_controller.turnOnRelay(function (error) {

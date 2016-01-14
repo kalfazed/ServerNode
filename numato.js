@@ -1,6 +1,9 @@
 'use strict';
 
 var serialport = require("serialport");
+var led = require('./app.js');
+
+
 
 function NumatoControllerFactory() {
 
@@ -172,9 +175,11 @@ function NumatoControllerFactory() {
             if (isNaN(value)) {
                 return;
             }
+            var sum_tmp;
+            sum_tmp = 10 * led.led_off_setted(); 
             self.sum += value;
             if (self.counter >= 10) {
-                if (self.sum < 1500) {
+                if (self.sum < sum_tmp) {
   //                  console.log('[waitPowerOff] Current counter is ' + self.counter);
   //                  console.log('[waitPowerOff] adc 3 sum is ' + self.sum);
  //                   console.log('Have finished Waiting');              
@@ -205,6 +210,14 @@ function NumatoControllerFactory() {
                 writeAndDrain(self.serial_port, "relay off 0\r", callback);
             }, 1000);
         });
+        /*
+        console.log("In numato.js, Parameter is called like this\n");
+        console.log("LED On is "+ led.led_on_setted());
+        console.log("LED OFF is "+ led.led_off_setted());
+             var sum_tmp;
+            sum_tmp = 10 * led.led_off_setted(); 
+        console.log("sum is "+ sum_tmp);
+          */  
     }
 
     NumatoController.prototype.powerOn = function (callback) {
@@ -234,8 +247,10 @@ function NumatoControllerFactory() {
             }
                        
             self.sum += value;
+            var sum_tmp;
+            sum_tmp = 10 * led.led_off_setted(); 
             if (self.counter >= 10) {
-                if (self.sum <= 1500) { // power off
+                if (self.sum <= sum_tmp) { // power off
      //               console.log('[powerOn] Current counter is ' + self.counter);
      //               console.log('[powerOn] sum is ' + self.sum);
                     self.pushPowerSwitch();
@@ -283,8 +298,10 @@ function NumatoControllerFactory() {
             }
 
             self.sum += value;
+            var sum_tmp;
+            sum_tmp = 10 * led.led_off_setted(); 
             if (self.counter >= 10) {
-                if (self.sum > 1500) { // power off
+                if (self.sum > sum_tmp) { // power off
    //                 console.log('[powerOff] Current counter is ' + self.counter);
    //                 console.log('[powerOff] sum is ' + self.sum);
                     self.pushPowerSwitch();

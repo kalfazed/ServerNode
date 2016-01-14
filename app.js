@@ -48,11 +48,21 @@ var testTimes_reboot;
 var testTimes_coldboot;
 var target_url;
 var agentIP_input;
-var agentName_input;
+var agentName = [];
 var agentIP_http;
-var agentCOM;
+var agentCOM = [];
 var Operation_log = "";
 var kalfazed;
+
+var session_array = [];
+var session_name = [];
+var session_number = 0;
+
+var led_on = [1100, 110];
+var led_off = [150, 2];
+
+var led_on_setted ;
+var led_off_setted;
 
 
 app.get('/', function(req, res){
@@ -66,21 +76,41 @@ app.post('/upload', function(req, res){
 
 app.post('/bootTest', function(req, res){
 //    res.render('bootTest');
-    agentCOM = req.body.COM;
+    session_number++;
+    
+    agentCOM[session_number] = req.body.COM;
+    agentName[session_number] = req.body.Name;
+  
+  
     agentIP_input = req.body.IP;
     agentIP_http = "http://" + agentIP_input + ":8000";
-    agentName_input = req.body.Name;
-    Operation_log += "Hello " + agentName_input;
-    res.render('bootTest', {title: 'Kalfazed wanna have lunch!!'});
-    console.log(agentIP_http + "/cdiTest");
+    Operation_log += "Hello " + agentName[session_number];
+    res.render('bootTest', {title: ''});
+    
+    console.log(agentCOM[session_number]);
+    
+    if(agentName[session_number] == "kalfazed"){
+        led_on_setted = led_on[1];
+        console.log("Led power on is "+ led_on_setted);
+        led_off_setted = led_off[1];
+        console.log("Led power off is "+ led_off_setted);
+    }else{
+        led_on_setted = led_on[0];
+        console.log("Led power on is "+ led_on_setted);
+        led_off_setted = led_off[0];
+        console.log("Led power off is "+ led_off_setted);  
+    }
+//    console.log(agentIP_http + "/cdiTest");
+    
 });
 
 
 app.post('/start_test', function(req, res){
     testTimes_coldboot = req.body.selection_coldBoot;
-//    testTimes_reboot = req.body.selection_coldBoot;
-          var test_case = new BootTestFactory.BootTest(testTimes_coldboot, agentCOM, 9600);
-          testSession = TestSessionController.createNewTestSession(kalfazed, "", test_case);
+    testTimes_reboot = req.body.selection_coldBoot;
+//    console.log(agentCOM[session_number]);
+          var test_case = new BootTestFactory.BootTest(testTimes_coldboot, agentCOM[session_number], 9600);
+          testSession = TestSessionController.createNewTestSession(agentName[session_number], "", test_case);
           if (testSession == null) {
             res.writeHead(200, { 'Content-Type': 'text/plain' });
             res.end('fail createNewTestSession\n'); 
@@ -92,24 +122,30 @@ app.post('/start_test', function(req, res){
                   res.end('fail start_test\n');
                 });
               } else {
+                 
                 res.writeHead(200, { 'Content-Type': 'text/plain' });
                 res.end('start_test\n');
               }
             });
           }
+     console.log("Agent "+agentName[session_number]+" is running");
 });
 
 
 app.post('/pushPowerButton', function(req, res){
-   testSession = TestSessionController.getSession(kalfazed);
+   testSession = TestSessionController.getSession(agentName[session_number]);
           testSession.action("push_power_switch", function (error) {
             res.writeHead(200, { 'Content-Type': 'text/plain' });
             if (error) {
               res.end('fail power_on_off\n');
             } else {
-              res.end('power_on_off\n');
+              setTimeout(function(){
+                  res.end('power_on_off\n');
+                  console.log("Agent "+agentName[session_number]+" Power on!");
+              },15000);          
             }
           });
+
 });
 
 app.post('/reBoot', function(req, res){
@@ -129,17 +165,20 @@ app.post('/reBoot', function(req, res){
 
 
 app.post('/coldBoot', function(req, res){
-    testSession = TestSessionController.getSession(kalfazed);
+    testSession = TestSessionController.getSession(agentName[session_number]);
     testSession.action("cold boot", function (error) {
          if (error) {
             res.end('fail cold boot\n');
             console.log("fail cold boot");
           } else {
-            console.log("Finish cold boot" );
+            console.log("Botting..." );
+
             setTimeout(function(){
-  //              res.end('cold booting now\n');
-                 res.end(agentIP_http + "/cdiTest");
+                res.end('cold booting now\n');
+                console.log("Agent "+agentName[session_number]+" is doing the test..." );
+    //             res.end(agentIP_http + "/cdiTest");
             },30000);
+      
            
           }
     });
@@ -160,12 +199,21 @@ console.log('Test controller start on port 8888');
 module.exports = app;
 
 
+
 function sleep(miliSeconds){
     var startTime = new Date().getTime();
     while (new Date().getTime() < startTime + miliSeconds);
     
 };
 
+
+exports.led_on_setted = function(){
+    return led_on_setted;
+}
+
+exports.led_off_setted = function(){
+    return led_off_setted;
+}
 
 
 
