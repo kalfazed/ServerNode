@@ -1,18 +1,23 @@
 'use strict';
 
 var NumatoControllerFactory = require('./numato.js');
+var agentIP = require('./app.js');
+var process = require('child_process');
 
 function BootTestFactory() {
 
   var factory = this;
 
-  function BootTest(times, port_name, baudrate) {
+  function ChangeEndTime(times){
+    this.end_num_trials = times;
+  }
+
+  function BootTest(port_name, baudrate) {
     this.test_state = "idle";
     this.current_num_trials = 0;
-    this.end_num_trials = times;
+    this.end_num_trials = 1;
     this.test_result = "";
     this.numato_controller = new NumatoControllerFactory.NumatoController(port_name, baudrate);
-    console.log("end time is "+this.end_num_trials);
   }
 
   // BootTest.prototype.start = function () {
@@ -31,12 +36,12 @@ function BootTestFactory() {
 
   void fms (CTtest test, void * callback);
   */
-  function gotoNextState(test, next_state, callback) {
+  function gotoNextState(test, next_state, res, callback) {
     test.test_state = next_state;
-    fms(test, callback);
+    fms(test, res, callback);
   }
 
-  function fms(test, callback) {
+  function fms(test, res, callback) {
     var current_test = test;
     var completion_routine = callback;
 
@@ -46,7 +51,7 @@ function BootTestFactory() {
         current_test.numato_controller.reset(function (error) {
           if (error) {
             console.log('fail to reset numato')
-            gotoNextState(current_test, "error", function(error) {
+            gotoNextState(current_test, "error",res, function(error) {
               completion_routine(error);
             });
             return;
@@ -54,17 +59,18 @@ function BootTestFactory() {
             console.log('reset numato')
             // wait link up with agent
             current_test.test_state = "linkup_wait"
-            completion_routine(error);
+            completion_routine(false);
           }
         });
         break;
       case "agent ready": // foreign event
         setTimeout(function () {
-          gotoNextState(current_test, "cold boot");
+          gotoNextState(current_test, "error", res, "cold boot");
         }, 5000);
         completion_routine(false);
         break;
       case "cold boot":
+        console.log("cold boot "+current_test.end_num_trials+ " times in all");
         var time_show;
         time_show = current_test.current_num_trials + 1;
         console.log('start cold boot test ' + time_show);
@@ -73,7 +79,7 @@ function BootTestFactory() {
         current_test.numato_controller.powerOff(function (error) {
           if (error) {
             console.log('fail to powerOff')
-            gotoNextState(current_test, "error",function (error) {
+            gotoNextState(current_test, "error",res, function (error) {
                       completion_routine(error);
             });
             return;
@@ -81,7 +87,7 @@ function BootTestFactory() {
           // wait power off
           current_test.numato_controller.waitPowerOff(function (error) {
             if (error) {
-              gotoNextState(current_test, "error",function (error) {
+              gotoNextState(current_test, "error", res, function (error) {
                       completion_routine(error);
                     });
             } else {
@@ -92,7 +98,7 @@ function BootTestFactory() {
                 current_test.numato_controller.powerOn(function (error) {
                   if (error) {
                     console.log('fail to powerOn')
-                    gotoNextState(current_test, "error", function (error) {
+                    gotoNextState(current_test, "error", res, function (error) {
                       completion_routine(error);
                     });
                     return;
@@ -101,23 +107,25 @@ function BootTestFactory() {
                   console.log('POWERED ON');
                   
                   setTimeout(function() {
-                      //current_test.test_state = "wait did cold boot";
-                      gotoNextState(current_test, "did cold boot", function (error) {
-                        completion_routine(error);
-                      });
+                      var cdiTest_ip = agentIP.agent_ip()+"/cdiTest"
+                      var coldBootSucceedIP = "http://192.168.130.115:8888/coldbootSucceed"
+                      var ColdbootTest = process.execFile('curl.bat',[coldBootSucceedIP], null, function(error, stdout, stderr)
+                       {
+                             console.log(error);
+                      })
+                                            
+                      var CDITest = process.execFile('curl.bat',[cdiTest_ip], null, function(error, stdout, stderr)
+                       {
+                             console.log(error);
+                      })
+                      setTimeout(function(){
+                           gotoNextState(current_test, "did cold boot", res, function (error) {
+                            completion_routine(error);
+                          });                         
+                      },10000);
     //                  console.log("finish cold boot " + time_show)
                   },40000);
                   
-             /*   
-                  current_test.numato_controller.waitPowerOn(function (error) {
-                    if (error) {
-                      gotoNextState(current_test, "error");
-                    } else {
-                      // wait did boot
-                      gotoNextState(current_test, "did cold boot");
-                    }
-                  });
-               */  
                    completion_routine(error);
                 });
                 
@@ -135,44 +143,63 @@ function BootTestFactory() {
         current_test.current_num_trials = current_test.current_num_trials + 1;
         if (current_test.current_num_trials != current_test.end_num_trials) {
 
- //         console.log("Current number is "+current_test.current_num_trials);
- //         console.log("End number is "+current_test.end_num_trials);
-          gotoNextState(current_test, "cold boot",function (error) {
+          gotoNextState(current_test, "cold boot",res, function (error) {
                       completion_routine(error);
                     });
         } else {
-          gotoNextState(current_test, "finished",function (error) {
+          gotoNextState(current_test, "finished",res,function (error) {
                       completion_routine(error);
                     });
         }
         break;        
       case "reboot":
-        console.log('start reboot test ' + current_test.current_num_trials);
+        console.log("reboot "+current_test.end_num_trials+" times in all");
+        var time_show_reboot;
+        time_show_reboot = current_test.current_num_trials + 1;
+        console.log('start reboot test ' + time_show_reboot);
+   //     res.redirect(agentIP.agent_ip()+"/reboot");
+        var reboot_ip = agentIP.agent_ip()+"/reboot"
+        var cdiTest_ip = agentIP.agent_ip()+"/cdiTest"
+        var rebootTest = process.execFile('curl.bat',[reboot_ip], null, function(error, stdout, stderr)
+        {
+            console.log(error);
+        })
 
-        // request reboot
+
+        console.log("rebooting...")
+  
         
         // wait did reboot
-        current_test.test_state = "wait did reboot";
-        completion_routine(true);
+        setTimeout(function(){
+            var CDITest = process.execFile('curl.bat',[cdiTest_ip], null, function(error, stdout, stderr)
+            {
+                             console.log(error);
+            })   
+            setTimeout(function(){
+                gotoNextState(current_test, "did reboot",res, function (error) {
+                     completion_routine(error); 
+                }); 
+            },10000);
+         
+        },70000);
+   
+       
         break;
       case "did reboot": // foreign event
-        // status check
-        if (current_test.test_result == "success") {
-          
-        } else {
-          
-        }
-        // save status
-        
-        completion_routine(false);
-
+        console.log("Did reboot\n");
         current_test.current_num_trials = current_test.current_num_trials + 1;
         if (current_test.current_num_trials != current_test.end_num_trials) {
-          gotoNextState(test, "cold boot");
+
+          gotoNextState(current_test, "reboot", res, function (error) {
+                      completion_routine(error);
+                    });
         } else {
-          gotoNextState(test, "finished");
+          gotoNextState(current_test, "finished",res, function (error) {
+                      completion_routine(error);
+                    });
         }
         break;        
+      
       case "aborted": // foreign event
         // save abort status
         // go idle
@@ -187,6 +214,8 @@ function BootTestFactory() {
         // save status
         // go idle
         console.log('Finished test without error state.');
+        agentIP.resetAgent();
+        current_test.current_num_trials = 0;
         completion_routine(false);
         break;
       case "relay_on":
@@ -223,14 +252,20 @@ function BootTestFactory() {
     this.test_state = "idle";
     callback(false);
   }
-  BootTest.prototype.start = function (callback) {
+  BootTest.prototype.start = function (res, callback) {
     this.test_state = "controller ready";
-    fms(this, callback);
+    fms(this, res, callback);
   }
-  BootTest.prototype.action = function (action_name, callback) {
+  BootTest.prototype.action = function (action_name, res, callback) {
     this.test_state = action_name;
-    fms(this, callback);
+    fms(this, res, callback);
   }
+  
+  BootTest.prototype.changeTime = function (Times, callback) {
+    this.end_num_trials = Times;
+    callback(false);
+  }
+  
   BootTest.prototype.abort = function (callback) {
     console.log('NOT IMPLEMENTED abort');
   }

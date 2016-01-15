@@ -7,26 +7,33 @@ function TestSessionController() {
   
   factory.sessions = new Array();
 
-  function TestSessionContext(test_name, target_address, test_case) {
+  function TestSessionContext(test_name, target_address, test_case, test_num) {
     this.test_name = test_name;
     this.test_state = "idle";
     this.target_address = target_address;
     this.test_case = test_case;
+    this.test_num = test_num;
 
     TestSessionContext.prototype.reset = function (callback) {
       console.log('reset session ' + test_name)
       this.test_state = "idle";
       test_case.reset(callback);
     }
-    TestSessionContext.prototype.start = function (callback) {
-      console.log('start kalfazed session ' + test_name)
+    TestSessionContext.prototype.start = function (res, callback) {
+      console.log('start session ' + test_name)
       this.test_state = "running";
-      test_case.start(callback);
+      test_case.start(res, callback);
     }
-    TestSessionContext.prototype.action = function (action_name, callback) {
+    TestSessionContext.prototype.action = function (action_name, res, callback) {
   //    console.log('action session ' + test_name)
-      test_case.action(action_name, callback);
+      test_case.action(action_name, res, callback);
     }
+    
+     TestSessionContext.prototype.changeTime = function (times, callback) {
+  //    console.log('action session ' + test_name)
+      test_case.changeTime(times, callback);
+    }   
+    
     TestSessionContext.prototype.abort = function (callback) {
       console.log('abort session ' + test_name)
       this.test_state = "aborted";
@@ -48,7 +55,8 @@ function TestSessionController() {
     }
   }
 
-  TestSessionController.prototype.createNewTestSession = function (test_name, target_address, test_case) {
+  TestSessionController.prototype.createNewTestSession = function (test_name, target_address, test_case, test_num) {
+/*
     var exist = factory.sessions.some(function (element) {
       //console.log('createNewTestSession ' + test_name)
       return (element.test_name == test_name);
@@ -57,16 +65,16 @@ function TestSessionController() {
     if (exist) {
       return null;
     }
-
-    var new_sesstion = new TestSessionContext(test_name, target_address, test_case);
+*/
+    var new_sesstion = new TestSessionContext(test_name, target_address, test_case, test_num);
     factory.sessions.push(new_sesstion);
 
     return new_sesstion;
   }
 
-  TestSessionController.prototype.getSession = function (test_name) {
+  TestSessionController.prototype.getSession = function (test_num) {
     for (var i in factory.sessions) {
-      if (factory.sessions[i].test_name == test_name) {
+      if (factory.sessions[i].test_num == test_num) {
         return factory.sessions[i];
       }
     }

@@ -99,6 +99,7 @@ function NumatoControllerFactory() {
 
     NumatoController.prototype.reset = function (callback) {
         var self = this;
+  //      console.log("serial port is "+ this.serial_port)
         writeAndDrain(self.serial_port, "gpio clear 3\r", function () {
             writeAndDrain(self.serial_port, "relay off 0\r", callback);
         });
@@ -181,13 +182,13 @@ function NumatoControllerFactory() {
             if (self.counter >= 10) {
                 if (self.sum < sum_tmp) {
   //                  console.log('[waitPowerOff] Current counter is ' + self.counter);
-  //                  console.log('[waitPowerOff] adc 3 sum is ' + self.sum);
- //                   console.log('Have finished Waiting');              
+   //                 console.log('[waitPowerOff] adc 3 sum is ' + self.sum);
+   //                 console.log('Have finished Waiting');              
                     clearTimer(self);
                     completion_routine(false);
                 } else {
      //               console.log('[waitPowerOff] Current counter is ' + self.counter);
-   //                 console.log('[waitPowerOff] adc 3 sum is ' + self.sum);
+     //               console.log('[waitPowerOff] adc 3 sum is ' + self.sum);
                     self.sum = 0;
                     self.counter = 0;
                     setTimeout(read_function, 1000);
@@ -256,7 +257,7 @@ function NumatoControllerFactory() {
                     self.pushPowerSwitch();
                 } else {
   //                  console.log('[powerOn] Current counter is ' + self.counter);
-   //                 console.log('[powerOn] already power on. adc 3 sum is ' + self.sum);
+     //               console.log('[powerOn] already power on. adc 3 sum is ' + self.sum);
                     // already power on
                 }
             

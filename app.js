@@ -58,11 +58,16 @@ var session_array = [];
 var session_name = [];
 var session_number = 0;
 
-var led_on = [1100, 110];
-var led_off = [150, 2];
+var led_on = [1100, 1100, 110];
+var led_off = [500, 500, 2];
 
 var led_on_setted ;
 var led_off_setted;
+
+var cur_session_num;
+var rebootTime = 0;
+var cdiTime = 0;
+var coldbootTime = 0;
 
 
 app.get('/', function(req, res){
@@ -87,101 +92,172 @@ app.post('/bootTest', function(req, res){
     Operation_log += "Hello " + agentName[session_number];
     res.render('bootTest', {title: ''});
     
-    console.log(agentCOM[session_number]);
+ //   console.log(agentCOM[session_number]);
     
-    if(agentName[session_number] == "kalfazed"){
-        led_on_setted = led_on[1];
-        console.log("Led power on is "+ led_on_setted);
-        led_off_setted = led_off[1];
-        console.log("Led power off is "+ led_off_setted);
-    }else{
+    if(agentName[session_number] == "Melon"){
         led_on_setted = led_on[0];
-        console.log("Led power on is "+ led_on_setted);
         led_off_setted = led_off[0];
-        console.log("Led power off is "+ led_off_setted);  
+
     }
-//    console.log(agentIP_http + "/cdiTest");
+    if(agentName[session_number] == "pear"){
+        led_on_setted = led_on[1];
+        led_off_setted = led_off[1];
+
+    }
+    if(agentName[session_number] == "kalfazed"){
+        led_on_setted = led_on[2];
+        led_off_setted = led_off[2];
+
+    }
+    console.log("Agent "+ agentName[session_number] + " is ready now");
     
 });
 
 
 app.post('/start_test', function(req, res){
-    testTimes_coldboot = req.body.selection_coldBoot;
-    testTimes_reboot = req.body.selection_coldBoot;
+    
+    //If some operations are going to run on the same agent,
+    //a new session will be created, and some basic information are same as the last session
+    
+    if((agentName[session_number] == null) ||(agentCOM[session_number] == null)){
+        agentName[session_number] = agentName[session_number-1];
+        agentCOM[session_number] = agentCOM[session_number-1];
+    }    
+    
+//    testTimes_coldboot = req.body.selection_coldBoot;
+//    testTimes_reboot = req.body.selection_coldBoot;
 //    console.log(agentCOM[session_number]);
-          var test_case = new BootTestFactory.BootTest(testTimes_coldboot, agentCOM[session_number], 9600);
-          testSession = TestSessionController.createNewTestSession(agentName[session_number], "", test_case);
+          var test_case = new BootTestFactory.BootTest(agentCOM[session_number], 9600);
+          testSession = TestSessionController.createNewTestSession(agentName[session_number], "", test_case, session_number);
+          console.log(agentName[session_number] + " is created" )
+ //         console.log(agentCOM[session_number] + " is created")
+          cur_session_num = session_number;
+          
           if (testSession == null) {
             res.writeHead(200, { 'Content-Type': 'text/plain' });
             res.end('fail createNewTestSession\n'); 
           } else {
-            testSession.start(function (error) {
+            testSession.start(res, function (error) {
               if (error) {
                   TestSessionController.deleteNewTestSession(testSession, function (error) {
                   res.writeHead(200, { 'Content-Type': 'text/plain' });
                   res.end('fail start_test\n');
                 });
               } else {
-                 
+
+                session_number ++;   
+    //            printSessionInfo(cur_session_num);  
                 res.writeHead(200, { 'Content-Type': 'text/plain' });
                 res.end('start_test\n');
               }
             });
           }
-     console.log("Agent "+agentName[session_number]+" is running");
+ //    console.log(cur_session_num);     
+     console.log("Agent "+agentName[cur_session_num]+" is running");
 });
 
 
 app.post('/pushPowerButton', function(req, res){
-   testSession = TestSessionController.getSession(agentName[session_number]);
-          testSession.action("push_power_switch", function (error) {
+    console.log("waiting for agent standing by..")
+   testSession = TestSessionController.getSession(cur_session_num);
+          testSession.action("push_power_switch",res, function (error) {
             res.writeHead(200, { 'Content-Type': 'text/plain' });
             if (error) {
               res.end('fail power_on_off\n');
             } else {
               setTimeout(function(){
                   res.end('power_on_off\n');
-                  console.log("Agent "+agentName[session_number]+" Power on!");
-              },15000);          
+                  console.log("Agent "+agentName[cur_session_num]+" Power on!");
+              },30000);          
             }
           });
 
 });
 
 app.post('/reBoot', function(req, res){
+  testSession = TestSessionController.getSession(cur_session_num);
   testTimes_reboot = req.body.selection_reBoot;
+  testSession.changeTime(testTimes_reboot, function(error) {
+       if (error){
+           console.log("fail to change times")
+       } else {
+  //         console.log("succeed in changing the times!")
+       }
+    });
   
-  while(testTimes_reboot != 0)
-  {
-    console.log(testTimes_reboot);
-    testTimes_reboot--;
-    sleep(1000);
-  }
+  testSession.action("reboot", res, function (error) {
+         if (error) {
+            res.end('fail reboot\n');
+            console.log("fail reboot");
+          } else {
+            console.log("reBooting..." );
+
+            setTimeout(function(){
+               
+                console.log("Agent "+agentName[cur_session_num]+" is doing the test..." );
+            },30000);
+      
+           
+          }
+    });
   
-  res.end(agentIP_http);
+  
+  
+  res.end("Agent is rebooting!");
  // res.end(agentIP);
   console.log("Running reboot");
 });
 
+app.get('/rebootSucceed', function(req, res){
+    rebootTime++;
+    console.log("------------------------------");
+    console.log("reboot succeed time "+rebootTime);
+    console.log("------------------------------");
+});
+
+app.get('/coldbootSucceed', function(req, res){
+    coldbootTime++;
+    console.log("------------------------------");
+    console.log("cold boot succeed time "+coldbootTime);
+    console.log("------------------------------");
+});
+
+app.get('/cdiSucceed', function(req, res){
+    cdiTime++;
+    console.log("------------------------------");
+    console.log("cdiTest succeed time "+cdiTime);
+    console.log("------------------------------");
+});
+
 
 app.post('/coldBoot', function(req, res){
-    testSession = TestSessionController.getSession(agentName[session_number]);
-    testSession.action("cold boot", function (error) {
+    testSession = TestSessionController.getSession(cur_session_num);
+    testTimes_coldboot = req.body.selection_coldBoot;
+    testSession.changeTime(testTimes_coldboot, function(error) {
+       if (error){
+           console.log("fail to change times")
+       } else {
+ //          console.log("succeed in changing the times!")
+       }
+    });
+    testSession.action("cold boot", res, function (error) {
          if (error) {
             res.end('fail cold boot\n');
             console.log("fail cold boot");
           } else {
-            console.log("Botting..." );
+            console.log("Booting..." );
 
             setTimeout(function(){
-                res.end('cold booting now\n');
-                console.log("Agent "+agentName[session_number]+" is doing the test..." );
+                
+                res.end('cold booting now');
+                console.log("Agent "+agentName[cur_session_num]+" is doing the test..." );
     //             res.end(agentIP_http + "/cdiTest");
             },30000);
       
            
           }
     });
+    res.end('cold booting now');
       
   
  //   console.log("end the post cold boot");           
@@ -215,6 +291,23 @@ exports.led_off_setted = function(){
     return led_off_setted;
 }
 
+exports.agent_ip = function(){
+    return agentIP_http;
+}
+
+exports.resetAgent = function(){
+    coldbootTime = 0;
+    rebootTime = 0;
+    cdiTime = 0; 
+}
+
+function printSessionInfo(session_num){
+    session = TestSessionController.getSession(session_num);
+    console.log("session numer: "+ session.test_num);
+    console.log("session agent name: "+ session.test_name);
+    console.log("session test state: "+ session.test_case.test_state);
+    
+}
 
 
  
