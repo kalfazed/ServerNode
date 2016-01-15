@@ -165,10 +165,8 @@ app.post('/pushPowerButton', function(req, res){
             if (error) {
               res.end('fail power_on_off\n');
             } else {
-              setTimeout(function(){
                   res.end('power_on_off\n');
                   console.log("Agent "+agentName[cur_session_num]+" Power on!");
-              },30000);          
             }
           });
 
@@ -190,14 +188,8 @@ app.post('/reBoot', function(req, res){
             res.end('fail reboot\n');
             console.log("fail reboot");
           } else {
-            console.log("reBooting..." );
-
-            setTimeout(function(){
-               
-                console.log("Agent "+agentName[cur_session_num]+" is doing the test..." );
-            },30000);
-      
-           
+            console.log("reBooting... called from app" );
+            res.end('rebooting\n');
           }
     });
   
@@ -208,18 +200,57 @@ app.post('/reBoot', function(req, res){
   console.log("Running reboot");
 });
 
-app.get('/rebootSucceed', function(req, res){
-    rebootTime++;
-    console.log("------------------------------");
-    console.log("reboot succeed time "+rebootTime);
-    console.log("------------------------------");
-});
 
-app.get('/coldbootSucceed', function(req, res){
-    coldbootTime++;
-    console.log("------------------------------");
-    console.log("cold boot succeed time "+coldbootTime);
-    console.log("------------------------------");
+
+app.get('/bootSucceed', function(req, res){
+    testSession = TestSessionController.getSession(cur_session_num);
+    
+    var status = testSession.getStatus(function(error) {
+       if (error){
+           console.log("fail to get status ")
+       } else {
+  //         console.log("succeed in changing the times!")
+       }
+    })
+    console.log("status in app is "+ BootTestFactory.tmp_status);
+    
+    if (status == "cold boot"){
+           coldbootTime++;
+           console.log("------------------------------");
+           console.log("cold boot succeed time "+coldbootTime);
+           console.log("------------------------------");  
+           testSession.action("wait test", res, function (error){
+           if (error) {
+               res.end("fail to do the test");
+               console.log("fail to do the test called from app");            
+             } else {
+              res.end("Agent is doing the test");
+             console.log("Agent is doing the test called from app");              
+           }
+        });      
+    }
+    
+    if (BootTestFactory.tmp_status == "reboot"){
+          rebootTime++;
+          console.log("------------------------------");
+          console.log("reboot succeed time "+rebootTime);
+          console.log("------------------------------");
+          testSession.action("wait test", res, function (error){
+           if (error) {
+               res.end("fail to do the test");
+               console.log("fail to do the test called from app");            
+             } else {
+              res.end("Agent is doing the test");
+             console.log("Agent is doing the test called from app");              
+           }
+        });   
+     }  else {
+         console.log("Agent has stanby")
+     } 
+     
+
+    
+
 });
 
 app.get('/cdiSucceed', function(req, res){

@@ -33,7 +33,12 @@ function TestSessionController() {
   //    console.log('action session ' + test_name)
       test_case.changeTime(times, callback);
     }   
-    
+ 
+      TestSessionContext.prototype.getStatus = function (callback) {
+  //    console.log('action session ' + test_name)
+      test_case.getStatus(callback);
+    }   
+       
     TestSessionContext.prototype.abort = function (callback) {
       console.log('abort session ' + test_name)
       this.test_state = "aborted";

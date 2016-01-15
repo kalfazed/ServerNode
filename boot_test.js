@@ -3,16 +3,21 @@
 var NumatoControllerFactory = require('./numato.js');
 var agentIP = require('./app.js');
 var process = require('child_process');
+var tmp_status = "";
+
 
 function BootTestFactory() {
 
   var factory = this;
 
+
   function ChangeEndTime(times){
     this.end_num_trials = times;
   }
+  
 
   function BootTest(port_name, baudrate) {
+    this.tmp_status = "idle";
     this.test_state = "idle";
     this.current_num_trials = 0;
     this.end_num_trials = 1;
@@ -105,28 +110,9 @@ function BootTestFactory() {
                   }
                   // power led check
                   console.log('POWERED ON');
-                  
-                  setTimeout(function() {
-                      var cdiTest_ip = agentIP.agent_ip()+"/cdiTest"
-                      var coldBootSucceedIP = "http://192.168.130.115:8888/coldbootSucceed"
-                      var ColdbootTest = process.execFile('curl.bat',[coldBootSucceedIP], null, function(error, stdout, stderr)
-                       {
-                             console.log(error);
-                      })
-                                            
-                      var CDITest = process.execFile('curl.bat',[cdiTest_ip], null, function(error, stdout, stderr)
-                       {
-                             console.log(error);
-                      })
-                      setTimeout(function(){
-                           gotoNextState(current_test, "did cold boot", res, function (error) {
-                            completion_routine(error);
-                          });                         
-                      },10000);
-    //                  console.log("finish cold boot " + time_show)
-                  },40000);
-                  
-                   completion_routine(error);
+                  console.log("cold booting, waiting agent stand by...");
+                  tmp_status = current_test.test_state;                  
+                  completion_routine(error);
                 });
                 
               }, 5000);
@@ -134,8 +120,6 @@ function BootTestFactory() {
             }
           });
         });
-        break;
-      case "wait did cold boot":
         break;
       case "did cold boot": // foreign event
         console.log("Did cold boot\n");
@@ -160,31 +144,50 @@ function BootTestFactory() {
    //     res.redirect(agentIP.agent_ip()+"/reboot");
         var reboot_ip = agentIP.agent_ip()+"/reboot"
         var cdiTest_ip = agentIP.agent_ip()+"/cdiTest"
-        var rebootTest = process.execFile('curl.bat',[reboot_ip], null, function(error, stdout, stderr)
-        {
-            console.log(error);
-        })
-
-
-        console.log("rebooting...")
-  
         
-        // wait did reboot
-        setTimeout(function(){
-            var CDITest = process.execFile('curl.bat',[cdiTest_ip], null, function(error, stdout, stderr)
-            {
-                             console.log(error);
-            })   
-            setTimeout(function(){
-                gotoNextState(current_test, "did reboot",res, function (error) {
-                     completion_routine(error); 
-                }); 
-            },10000);
-         
-        },70000);
-   
-       
+        var rebootTest = process.execFile('curl.bat',[reboot_ip], null, function(error, stdout, stderr){
+            if (error) {
+                     console.log("------------------------------");
+                     console.log("fail to reboot... ");
+                     console.log("------------------------------");
+                     gotoNextState(current_test, "error",res, function (error) {
+                            completion_routine(error);
+                     });
+            }                       
+        });
+        current_test.tmp_status = current_test.test_state;
+        console.log("rebooting... called from bootTest")  
+        console.log("current status is "+tmp_status);
+        completion_routine(false);
         break;
+        
+      case "wait test":
+        console.log("Agent is doing the test called from bootTest")
+        var CDITest = process.execFile('curl.bat',[cdiTest_ip], null, function(error, stdout, stderr){
+            if (error) {
+                   console.log("------------------------------");
+                   console.log("fail to do the test... ");
+                   console.log("------------------------------");
+                     gotoNextState(current_test, "error",res, function (error) {
+                            completion_routine(error);
+                     });
+            } 
+        })        
+        setTimeout(function(){
+            if(current_test == "reboot"){
+               gotoNextState(current_test, "did reboot",res, function (error) {
+                 completion_routine(error);               
+                });        
+            }
+            if(current_test == "cold boot"){
+             gotoNextState(current_test, "did cold boot",res, function (error) {
+                 completion_routine(error);                 
+             });
+            }
+        },5000);
+        completion_routine(false);
+
+        
       case "did reboot": // foreign event
         console.log("Did reboot\n");
         current_test.current_num_trials = current_test.current_num_trials + 1;
@@ -266,6 +269,11 @@ function BootTestFactory() {
     callback(false);
   }
   
+  BootTest.prototype.getStatus = function (callback) {
+    return this.tmp_status;
+    callback(false);
+  }
+  
   BootTest.prototype.abort = function (callback) {
     console.log('NOT IMPLEMENTED abort');
   }
@@ -287,6 +295,10 @@ function sleep(miliSeconds){
     while (new Date().getTime() < startTime + miliSeconds);
     
 };
+
+exports.tmp_status = function(){
+    return tmp_status;
+}
 
 
 
